@@ -1,0 +1,58 @@
+"use client";
+
+export const SECCIONES = ["inicio", "pregunta", "lista", "fotos", "momentos"] as const;
+export type Seccion = (typeof SECCIONES)[number];
+
+const ICONOS: Record<Seccion, React.ReactNode> = {
+  inicio: <path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" />,
+  pregunta: (
+    <>
+      <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" />
+      <path d="M10 9.5a2 2 0 1 1 2.8 1.8c-.5.3-.8.7-.8 1.2v.5M12 15.5h.01" />
+    </>
+  ),
+  lista: <path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" />,
+  fotos: (
+    <>
+      <path d="M4 8a2 2 0 0 1 2-2h1.5l1.5-2h6l1.5 2H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
+      <circle cx="12" cy="13" r="3.5" />
+    </>
+  ),
+  momentos: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </>
+  ),
+};
+
+const NOMBRES: Record<Seccion, string> = {
+  inicio: "Inicio",
+  pregunta: "Pregunta",
+  lista: "Lista",
+  fotos: "Fotos",
+  momentos: "Momentos",
+};
+
+export default function Navegacion({ actual }: { actual: string }) {
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-borde bg-tarjeta/90 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+      <ul className="mx-auto grid max-w-md grid-cols-5">
+        {SECCIONES.map((s) => (
+          <li key={s}>
+            <a
+              href={`#${s}`}
+              aria-current={actual === s ? "page" : undefined}
+              className={`flex flex-col items-center gap-0.5 py-2 text-[11px] transition ${actual === s ? "text-texto" : "text-suave hover:text-texto"}`}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={actual === s ? 2.2 : 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                {ICONOS[s]}
+              </svg>
+              {NOMBRES[s]}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}

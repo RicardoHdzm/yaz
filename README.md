@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rick & Yaz
 
-## Getting Started
+Nuestro espacio a distancia:
 
-First, run the development server:
+- **Inicio:** días juntos, hora y clima de cada uno, cuenta regresiva para el reencuentro y mensajes rápidos ("Pensé en ti", "Te extraño"…) que llegan como notificación.
+- **Pregunta del día:** la misma pregunta para los dos; la respuesta del otro se ve hasta que contestas la tuya.
+- **Lista:** pendientes compartidos (películas y series, lugares, planes).
+- **Fotos:** una foto al día de cada uno y el álbum de días anteriores.
+- **Momentos:** línea del tiempo de la relación, con fotos.
+- **Perfiles** (botón arriba a la derecha): tallas, wishlist con links (el otro puede marcar "Ya lo compré" sin que el dueño lo vea) y colores personalizados de fondo y acento para tu app.
+
+Hecha con Next.js, Supabase (base de datos y fotos), Web Push (PWA) y Open-Meteo (clima, sin llave).
+
+## Puesta en marcha
+
+### 1. Crear el proyecto en Supabase (gratis)
+
+1. Entra a [supabase.com](https://supabase.com) → **Start your project** y crea una cuenta.
+2. **New project**:
+   - **Name:** el que quieras (ej. `rick-yaz`).
+   - **Database password:** genera una y guárdala (la app no la usa, pero Supabase la pide).
+   - **Region:** la más cercana, por ejemplo **West US (North California)**.
+3. Espera 1–2 minutos a que termine de crearse.
+
+### 2. Crear las tablas
+
+1. En el menú izquierdo: **SQL Editor** → **New query**.
+2. Pega **todo** el contenido de [`supabase/schema.sql`](supabase/schema.sql) y dale **Run**.
+3. Debe decir *Success. No rows returned*. Crea 10 tablas, sus datos iniciales (ciudades y el primer momento) y la carpeta privada `fotos`.
+
+Se puede correr otra vez sin problema (por ejemplo, cuando agreguemos funciones nuevas): no borra ni duplica nada.
+
+### 3. Copiar las llaves a `.env.local`
+
+En Supabase ve a **Project Settings** (engrane abajo a la izquierda):
+
+| Qué copiar | Dónde está | Variable en `.env.local` |
+| --- | --- | --- |
+| Project URL (`https://xxxx.supabase.co`) | **Data API** (o el botón **Connect** arriba) | `SUPABASE_URL` |
+| **Secret key** (`sb_secret_…`) | **API Keys** → *Secret keys* (crea una si no hay). Si solo ves las *legacy*, usa `service_role` | `SUPABASE_SERVICE_ROLE_KEY` |
+
+> ⚠️ Usa la llave **secreta**, no la *publishable* ni la *anon*. La app solo la usa en el servidor; nunca llega al navegador. No la compartas ni la subas a GitHub (`.env.local` ya está ignorado).
+
+Lo demás en `.env.local` ya está listo: nombres, fecha, zona horaria, código secreto y llaves de notificaciones. Opcional: cambia `VAPID_SUBJECT` por `mailto:` con tu correo.
+
+### 4. Verificar
+
+```bash
+npm run verificar
+```
+
+Revisa las variables, la conexión, las 10 tablas, que la carpeta de fotos sea privada y que se puedan subir fotos. Si algo falla, te dice qué y dónde arreglarlo. Nunca imprime las llaves.
+
+### 5. Probar en tu compu
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre http://localhost:3000 y entra con el código secreto (`CODIGO_SECRETO` en `.env.local`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Límites del plan gratis
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Fotos:** 1 GB. Cada foto se comprime a ~300 KB, así que caben unas 3,000.
+- **Pausa por inactividad:** Supabase pausa los proyectos gratis si nadie los usa en 7 días. Usándola seguido no pasa; si pasa, se reactiva desde el panel con un clic.
 
-## Learn More
+### 6. Publicar (Vercel, gratis)
 
-To learn more about Next.js, take a look at the following resources:
+1. Sube el proyecto a un repo **privado** de GitHub.
+2. En [vercel.com](https://vercel.com) → **Add New Project** → importa el repo.
+3. En **Environment Variables** pega todas las variables de `.env.local`.
+4. Deploy. Vas a tener un link tipo `https://rick-yaz.vercel.app`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 7. Instalarla en el celular
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **iPhone (Safari):** abrir el link → **Compartir** → **Agregar a inicio**, abrirla desde el ícono y tocar **Activar notificaciones**. En iPhone las notificaciones solo funcionan si está instalada así (iOS 16.4 o superior).
+- **Android (Chrome):** abrir el link → menú ⋮ → **Instalar app** → **Activar notificaciones**.
+- **Compu:** abrir el link en Chrome/Edge y **Activar notificaciones**.
 
-## Deploy on Vercel
+Cada quien elige quién es la primera vez y escribe el código secreto.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Estructura
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Archivo | Qué hace |
+| --- | --- |
+| `app/page.tsx` | Pantalla principal |
+| `app/componentes/` | Cada sección y pieza de la interfaz |
+| `app/api/*` | Endpoints (estado, pensar, pregunta, ubicación, pendientes, fotos, momentos…) |
+| `lib/config.ts` | Nombres, fecha de inicio, mensajes rápidos y categorías |
+| `lib/preguntas.ts` | Lista de preguntas del día |
+| `public/sw.js` | Service worker que muestra las notificaciones |
+| `supabase/schema.sql` | Tablas de la base de datos y carpeta de fotos |
+| `scripts/verificar.mjs` | Revisa que todo esté configurado (`npm run verificar`) |

@@ -1,26 +1,130 @@
 @import "tailwindcss";
 
+/*
+  Tokens de color:
+  --acento        relleno de botones y selección
+  --sobre-acento  texto encima de --acento
+  --acento-texto  acento usado como texto o ícono sobre el fondo
+*/
+
+/* Neutro: pantalla de entrada, antes de saber quién es */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --fondo: #f4f4f2;
+  --tarjeta: #ffffff;
+  --texto: #18181b;
+  --suave: #71717a;
+  --borde: #e4e4e7;
+  --relleno: #f4f4f5;
+  --acento: #18181b;
+  --sobre-acento: #ffffff;
+  --acento-texto: #e5484d;
+  --acento-suave: #fdecec;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema]) {
+    color-scheme: dark;
+    --fondo: #0e0e10;
+    --tarjeta: #18181b;
+    --texto: #f4f4f5;
+    --suave: #a1a1aa;
+    --borde: #27272a;
+    --relleno: #232326;
+    --acento: #f4f4f5;
+    --sobre-acento: #18181b;
+    --acento-texto: #ef5f63;
+    --acento-suave: #3a1d1f;
+  }
+}
+
+/* Rick: fondo negro, acento azul */
+:root[data-tema="a"] {
+  color-scheme: dark;
+  --fondo: #000000;
+  --tarjeta: #111214;
+  --texto: #f2f3f5;
+  --suave: #9a9ca3;
+  --borde: #25272b;
+  --relleno: #1a1c20;
+  --acento: #2f99eb;
+  --sobre-acento: #ffffff;
+  --acento-texto: #2f99eb;
+  --acento-suave: #0d2436;
+}
+
+/* Yaz: fondo claro, acento rosa #fad4f5 */
+:root[data-tema="b"] {
+  color-scheme: light;
+  --fondo: #fbf7fa;
+  --tarjeta: #ffffff;
+  --texto: #2d2430;
+  --suave: #8a7e88;
+  --borde: #f1e4ee;
+  --relleno: #f9eff7;
+  --acento: #fad4f5;
+  --sobre-acento: #4d2347;
+  --acento-texto: #b0569f;
+  --acento-suave: #fdeefb;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-fondo: var(--fondo);
+  --color-tarjeta: var(--tarjeta);
+  --color-texto: var(--texto);
+  --color-suave: var(--suave);
+  --color-borde: var(--borde);
+  --color-relleno: var(--relleno);
+  --color-acento: var(--acento);
+  --color-sobre-acento: var(--sobre-acento);
+  --color-acento-texto: var(--acento-texto);
+  --color-acento-suave: var(--acento-suave);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+body {
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes flotar {
+  0% {
+    transform: translate(0, 0) scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(var(--dx), -55vh) scale(1.1) rotate(var(--rot));
+    opacity: 0;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.corazon-flotante {
+  position: fixed;
+  bottom: 22vh;
+  color: var(--acento-texto);
+  pointer-events: none;
+  animation: flotar 2.2s ease-out forwards;
+  z-index: 50;
+}
+
+@keyframes pulso {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.pulso {
+  animation: pulso 0.35s ease-out;
 }

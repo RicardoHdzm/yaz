@@ -1,69 +1,181 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { NOMBRES, otra } from "@/lib/config";
+import { api, guardarSesion, leerSesion, medianocheLocal, suscribirSesion, type Estado } from "@/lib/cliente";
+import { useCarga } from "@/lib/useCarga";
+import { aplicarTema } from "@/lib/tema";
+import Bienvenida from "./componentes/Bienvenida";
+import Juntos from "./componentes/Juntos";
+import Reencuentro from "./componentes/Reencuentro";
+import PenseEnTi from "./componentes/PenseEnTi";
+import Notificaciones from "./componentes/Notificaciones";
+import HoraClima from "./componentes/HoraClima";
+import Pregunta from "./componentes/Pregunta";
+import Pendientes from "./componentes/Pendientes";
+import Fotos from "./componentes/Fotos";
+import Momentos from "./componentes/Momentos";
+import Navegacion, { SECCIONES, type Seccion } from "./componentes/Navegacion";
+import Perfil from "./componentes/Perfil";
+import Corazon from "./componentes/Corazon";
+import Corazones, { crearCorazones, type Particula } from "./componentes/Corazones";
+
+// La sección actual vive en el #hash de la URL (así las notificaciones pueden abrir una sección)
+type Vista = Seccion | "perfil";
+
+function leerSeccion(): Vista {
+  const h = window.location.hash.slice(1);
+  return h === "perfil" || (SECCIONES as readonly string[]).includes(h) ? (h as Vista) : "inicio";
+}
+
+function suscribirSeccion(oyente: () => void) {
+  window.addEventListener("hashchange", oyente);
+  return () => window.removeEventListener("hashchange", oyente);
+}
+
+export default function Inicio() {
+  const sesion = useSyncExternalStore(suscribirSesion, leerSesion, () => undefined);
+  const seccion = useSyncExternalStore(suscribirSeccion, leerSeccion, () => "inicio" as Vista);
+  const [estado, setEstado] = useState<Estado | null>(null);
+  const [ahora, setAhora] = useState<Date | null>(null);
+  const [corazones, setCorazones] = useState<Particula[]>([]);
+  const [aviso, setAviso] = useState("");
+  const ultimoVisto = useRef<number | null>(null);
+
+  useEffect(() => {
+    const tic = () => setAhora(new Date());
+    const t0 = setTimeout(tic, 0);
+    const t = setInterval(tic, 1000);
+    return () => {
+      clearTimeout(t0);
+      clearInterval(t);
+    };
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [seccion]);
+
+  // Cada quien tiene su tema (Rick oscuro con azul, Yaz claro con rosa), o el que personalizó en su perfil
+  // persona: undefined = todavía no se lee la sesión, null = no hay sesión
+  const persona = sesion === undefined ? undefined : (sesion?.persona ?? null);
+  const temaGuardado = JSON.stringify(persona && estado ? (estado.temas?.[persona] ?? null) : undefined);
+  useEffect(() => {
+    if (persona === undefined) return;
+    if (persona === null) return aplicarTema(null, null);
+    // Mientras carga el estado se queda el tema guardado en el dispositivo
+    if (temaGuardado === undefined) document.documentElement.dataset.tema = persona;
+    else aplicarTema(persona, JSON.parse(temaGuardado));
+  }, [persona, temaGuardado]);
+
+  const lanzarCorazones = useCallback(() => {
+    const nuevos = crearCorazones();
+    setCorazones((c) => [...c, ...nuevos]);
+    setTimeout(() => setCorazones((c) => c.filter((x) => !nuevos.includes(x))), 3600);
+  }, []);
+
+  const mostrarAviso = useCallback((texto: string) => {
+    setAviso(texto);
+    setTimeout(() => setAviso(""), 2800);
+  }, []);
+
+  const salir = useCallback(() => {
+    guardarSesion(null);
+    setEstado(null);
+    ultimoVisto.current = null;
+  }, []);
+
+  const cargar = useCallback(async () => {
+    if (!sesion) return;
+    try {
+      const e = await api<Estado>(sesion.codigo, `/api/estado?desde=${encodeURIComponent(medianocheLocal())}`);
+      // Si llegó algo nuevo de la otra persona mientras la app está abierta, celebramos
+      const ultimoSuyo = e.recientes.find((p) => p.de === otra(sesion.persona))?.id ?? 0;
+      if (ultimoVisto.current !== null && ultimoSuyo > ultimoVisto.current) {
+        lanzarCorazones();
+        mostrarAviso(`${NOMBRES[otra(sesion.persona)]} te mandó un mensaje`);
+      }
+      ultimoVisto.current = ultimoSuyo;
+      setEstado(e);
+    } catch (err) {
+      if ((err as { status?: number }).status === 401) salir();
+    }
+  }, [sesion, lanzarCorazones, mostrarAviso, salir]);
+
+  useCarga(cargar, 15000);
+
+  if (sesion === undefined) return null;
+  if (sesion === null) return <Bienvenida alEntrar={guardarSesion} />;
+  if (!ahora) return null;
+
+  const yo = sesion.persona;
+  const { codigo } = sesion;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <>
+      <main className="mx-auto w-full max-w-md flex-1 space-y-3 px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
+        <header className="flex items-center justify-between py-1">
+          <h1 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+            {NOMBRES.a} <Corazon size={16} className="text-acento-texto" /> {NOMBRES.b}
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
           <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="#perfil"
+            aria-label="Perfiles"
+            className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${
+              seccion === "perfil" ? "border-acento bg-acento text-sobre-acento" : "border-borde text-suave hover:text-texto"
+            }`}
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21a8 8 0 0 1 16 0" />
+            </svg>
+          </a>
+        </header>
+
+        {seccion === "inicio" && (
+          <>
+            <Notificaciones yo={yo} codigo={codigo} />
+            <Juntos ahora={ahora} />
+            <HoraClima yo={yo} codigo={codigo} ubicaciones={estado?.ubicaciones} ahora={ahora} alCambiar={cargar} />
+            <Reencuentro
+              fecha={estado?.proximoEncuentro ?? null}
+              ahora={ahora}
+              alGuardar={async (fecha) => {
+                await api(codigo, "/api/proximo", { fecha });
+                await cargar();
+              }}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+            <PenseEnTi
+              yo={yo}
+              estado={estado}
+              ahora={ahora}
+              alEnviar={async (mensaje) => {
+                lanzarCorazones();
+                try {
+                  await api(codigo, "/api/pensar", { de: yo, mensaje });
+                  mostrarAviso(`Enviado a ${NOMBRES[otra(yo)]}`);
+                  await cargar();
+                } catch (e) {
+                  mostrarAviso(`No se pudo enviar: ${(e as Error).message}`);
+                }
+              }}
+            />
+          </>
+        )}
+        {seccion === "pregunta" && <Pregunta yo={yo} codigo={codigo} />}
+        {seccion === "lista" && <Pendientes yo={yo} codigo={codigo} />}
+        {seccion === "fotos" && <Fotos yo={yo} codigo={codigo} />}
+        {seccion === "momentos" && <Momentos yo={yo} codigo={codigo} />}
+        {seccion === "perfil" && <Perfil yo={yo} codigo={codigo} temaActual={estado?.temas?.[yo] ?? null} alCambiarTema={cargar} alSalir={salir} />}
       </main>
-    </div>
+
+      <Navegacion actual={seccion} />
+      <Corazones lista={corazones} />
+      {aviso && (
+        <div className="fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 flex justify-center px-4">
+          <p className="rounded-full bg-texto px-4 py-2 text-sm font-medium text-fondo shadow-lg">{aviso}</p>
+        </div>
+      )}
+    </>
   );
 }
